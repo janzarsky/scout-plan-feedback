@@ -67,6 +67,34 @@ Vygeneruj strukturovaný Markdown s následujícími sekcemi:
 """
 
 
+def initialize_auth_secrets():
+    """Explicitly map process environment variables into Streamlit secrets."""
+    client_id = os.getenv("STREAMLIT_AUTH__GOOGLE__CLIENT_ID")
+    client_secret = os.getenv("STREAMLIT_AUTH__GOOGLE__CLIENT_SECRET")
+    cookie_secret = os.getenv("STREAMLIT_AUTH__COOKIE_SECRET")
+    redirect_uri = os.getenv("STREAMLIT_AUTH__REDIRECT_URI")
+    server_metadata_url = os.getenv(
+        "STREAMLIT_AUTH__GOOGLE__SERVER_METADATA_URL"
+    )
+
+    if client_id and cookie_secret:
+        auth_dict = {
+            "redirect_uri": redirect_uri,
+            "cookie_secret": cookie_secret,
+            "google": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "server_metadata_url": server_metadata_url,
+            }
+        }
+        # Safely assign directly to Streamlit internal secrets container
+        st.secrets._secrets["auth"] = auth_dict
+
+
+# Run hydration before any st.login() calls
+initialize_auth_secrets()
+
+
 def debug_auth_environment():
     """Inspect and log container environment variables and st.secrets status."""
     logger.info("=== START AUTH DEBUG CHECK ===")
