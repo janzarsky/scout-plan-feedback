@@ -3,13 +3,19 @@ import logging
 import streamlit as st
 from google import genai
 from google.genai import types
+from google.cloud import firestore
 
-# Configure logging for server-side error capture
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Constants
 MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB limit
+MAX_DAILY_ANALYSES = 5                  # Per-user daily quota
+
+# Initialize Firestore for user usage counting
+# (Uses Cloud Run's default service account authentication)
+db = firestore.Client()
 
 # Page setup
 st.set_page_config(
@@ -59,28 +65,54 @@ Vygeneruj strukturovaný Markdown s následujícími sekcemi:
   oddílu)
 """
 
+# Require Authentication
+if not st.experimental_user.is_logged_in:
+    st.title("Automatizovaná zpětná vazba pro skautské plány")
+    st.write("Pro použití této aplikace se prosím přihlaste pomocí účtu "
+             "Google.")
+    if st.button("Přihlásit se přes Google"):
+        st.login("google")
+    st.stop()
 
-def get_gemini_client():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        st.error("GEMINI_API_KEY environment variable is missing.")
-        st.stop()
-    return genai.Client(api_key=api_key)
+# User is authenticated
+user_email = st.experimental_user.email
+
+
+def get_user_usage_today(email: str) -> int:
+    """Fetch total analyses run by the user today."""
+    today_str = firestore.SERVER_TIMESTAMP  # or date string YYYY-MM-DD
+    doc_ref = db.collection("usage_limits").document(email)
+    doc = doc_ref.get()
+    if doc.exists:
+        data = doc.to_dict()
+        if data.get("last_reset_date") == today_str:
+            return data.get("count", 0)
+    return 0
+
+
+def increment_user_usage(email: str):
+    """Increment user analysis count in Firestore."""
+    today_str = firestore.SERVER_TIMESTAMP
+    doc_ref = db.collection("usage_limits").document(email)
+    doc_ref.set({
+        "count": firestore.Increment(1),
+        "last_reset_date": today_str,
+        "email": email
+    }, merge=True)
 
 
 # Header
 st.title("Automatizovaná zpětná vazba pro skautské plány")
-st.caption("Nahraj celoroční plán svého oddílu a získej okamžitou zpětnou"
-           " vazbu")
+st.write(f"Přihlášen jako: **{user_email}**")
+if st.button("Odhlásit se"):
+    st.logout()
 
 st.divider()
 
-# Privacy / PII Warning
-st.info(
-    "**Ochrana soukromí:** Nahraný text nebo soubor je odesílán ke zpracování "
-    "službě Google Gemini. Ujistěte se, že plán neobsahuje citlivé osobní "
-    "údaje (např. telefonní čísla, e-maily nebo celá jména dětí)."
-)
+# Display Current Usage
+current_usage = get_user_usage_today(user_email)
+st.caption(f"Využité analýzy pro dnešní den: {current_usage} "
+           f"z {MAX_DAILY_ANALYSES}")
 
 # Input Options Tab
 tab1, tab2 = st.tabs(["Nahrát plán v PDF", "Vložit text plánu"])
@@ -104,32 +136,28 @@ st.divider()
 
 if st.button("Analýza plánu a vygenerování zpětné vazby",
              use_container_width=True):
-    if not plan_bytes and not plan_text.strip():
-        st.warning("Pro pokračování prosím nahraj soubor PDF nebo vlož text"
-                   " plánu.")
+    if current_usage >= MAX_DAILY_ANALYSES:
+        st.error("Dosáhli jste maximálního denního limitu "
+                 f"({MAX_DAILY_ANALYSES} analýz). Zkuste to prosím zítra.")
+    elif not plan_bytes and not plan_text.strip():
+        st.warning("Pro pokračování prosím nahraj soubor PDF nebo vlož text "
+                   "plánu.")
     else:
-        client = get_gemini_client()
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
         with st.spinner("Analýza plánu..."):
             try:
-                # Prepare payload
                 contents = []
                 if plan_bytes:
-                    pdf_part = types.Part.from_bytes(
-                        data=plan_bytes,
-                        mime_type="application/pdf"
+                    contents.append(
+                        types.Part.from_bytes(data=plan_bytes,
+                                              mime_type="application/pdf")
                     )
-                    contents.append(pdf_part)
-
                 if plan_text.strip():
                     contents.append(f"Text dokumentu plánu:\n{plan_text}")
+                contents.append("Prosím zkontroluj tento skautský plán podle "
+                                "okresních metodických standardů.")
 
-                contents.append(
-                    "Prosím zkontroluj tento skautský plán podle okresních"
-                    " metodických standardů a vygeneruj strukturovanou zpětnou"
-                    " vazbu v češtině.")
-
-                # Call Gemini API
                 response = client.models.generate_content(
                     model="gemini-3.8-flash",
                     contents=contents,
@@ -139,17 +167,11 @@ if st.button("Analýza plánu a vygenerování zpětné vazby",
                     )
                 )
 
-                # Render Results
+                # Increment usage after successful response
+                increment_user_usage(user_email)
+
                 st.success("Analýza a zpětná vazba je dokončena.")
                 st.markdown(response.text)
-
-                # Download button for the output
-                st.download_button(
-                    label="Stáhnout zpětnou vazbu (.md)",
-                    data=response.text,
-                    file_name="zpetna_vazba_plan_oddilu.md",
-                    mime="text/markdown"
-                )
 
             except Exception as e:
                 logger.error("Error during plan evaluation: %s", e,
