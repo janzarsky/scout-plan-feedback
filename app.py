@@ -75,6 +75,13 @@ st.caption("Nahraj celoroční plán svého oddílu a získej okamžitou zpětno
 
 st.divider()
 
+# Privacy / PII Warning
+st.info(
+    "**Ochrana soukromí:** Nahraný text nebo soubor je odesílán ke zpracování "
+    "službě Google Gemini. Ujistěte se, že plán neobsahuje citlivé osobní "
+    "údaje (např. telefonní čísla, e-maily nebo celá jména dětí)."
+)
+
 # Input Options Tab
 tab1, tab2 = st.tabs(["Nahrát plán v PDF", "Vložit text plánu"])
 
