@@ -1,7 +1,6 @@
 import os
 import logging
 import streamlit as st
-from pypdf import PdfReader
 from google import genai
 from google.genai import types
 
