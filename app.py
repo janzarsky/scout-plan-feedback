@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB limit
-MAX_DAILY_ANALYSES = 5                  # Per-user daily quota
+MAX_DAILY_ANALYSES = 50                  # Per-user daily quota
 
 # Initialize Firestore for user usage counting
 # (Uses Cloud Run's default service account authentication)
