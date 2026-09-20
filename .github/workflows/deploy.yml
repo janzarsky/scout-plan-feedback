@@ -9,6 +9,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      APP_REDIRECT_URI: "${{ vars.APP_URL }}/oauth2callback"
 
     steps:
       - name: Checkout Code
@@ -27,7 +29,7 @@ jobs:
           source: "."
           env_vars: |
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            STREAMLIT_AUTH__REDIRECT_URI=${{ vars.APP_URL }}/oauth2callback
+            STREAMLIT_AUTH__REDIRECT_URI=${{ env.APP_REDIRECT_URI }}
             STREAMLIT_AUTH__GOOGLE__SERVER_METADATA_URL=https://accounts.google.com/.well-known/openid-configuration
           secrets: |
             STREAMLIT_AUTH__GOOGLE__CLIENT_ID=STREAMLIT_GOOGLE_CLIENT_ID:latest
