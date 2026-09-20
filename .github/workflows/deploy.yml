@@ -29,7 +29,7 @@ jobs:
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             STREAMLIT_AUTH__REDIRECT_URI=${{ secrets.APP_URL }}/oauth2callback
           secrets: |
-            STREAMLIT_AUTH__GOOGLE__CLIENT_ID=${{ secrets.STREAMLIT_GOOGLE_CLIENT_ID }}:latest
-            STREAMLIT_AUTH__GOOGLE__CLIENT_SECRET=${{ secrets.STREAMLIT_GOOGLE_CLIENT_SECRET }}:latest
-            STREAMLIT_AUTH__COOKIE_SECRET=${{ secrets.STREAMLIT_COOKIE_SECRET }}:latest
+            STREAMLIT_AUTH__GOOGLE__CLIENT_ID=STREAMLIT_GOOGLE_CLIENT_ID:latest
+            STREAMLIT_AUTH__GOOGLE__CLIENT_SECRET=STREAMLIT_GOOGLE_CLIENT_SECRET:latest
+            STREAMLIT_AUTH__COOKIE_SECRET=STREAMLIT_COOKIE_SECRET:latest
           flags: "--allow-unauthenticated"
