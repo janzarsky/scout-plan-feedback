@@ -1,0 +1,5 @@
+venv
+input_plans
+output_reviews
+.env
+.env.local
