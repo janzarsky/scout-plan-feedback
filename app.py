@@ -6,8 +6,7 @@ from google.genai import types
 
 # Page setup
 st.set_page_config(
-    page_title="Scout Plan Feedback Tool",
-    page_icon="⚜️",
+    page_title="Automatizovaná zpětná vazba pro skautské plány",
     layout="centered"
 )
 
@@ -20,62 +19,61 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 SYSTEM_PROMPT = """
-You are a District Scout Advisor evaluating annual scout unit plans. Your role is to provide supportive, 
-constructive, and actionable feedback to unit leaders (often ~20 years old).
+Jsi okresní skautský zpravodaj vyhodnocující celoroční plány skautských oddílů. Tvou rolí je poskytovat podporující, 
+konstruktivní a praktickou zpětnou vazbu vedoucím oddílů (často ve věku okolo 20 let).
 
-EVALUATION METHODOLOGY & RULES:
-1. SILENT MATURITY EVALUATION: Silently assess if the unit is Beginner, Intermediate, or Advanced based on 
-   plan complexity, goal setting, safety considerations, and activity progression.
-   - For Beginner units: Focus on core safety, essential calendar dates, and basic troop engagement.
-   - For Advanced units: Focus on scout progression, leadership delegation, and outdoor variety.
-2. TONE: Empathetic, encouraging, and mentoring. Avoid corporate jargon or overly harsh criticism.
-3. CITATIONS & RULES: Ground advice in district planning standards. Point out missing safety/water plans, 
-   unbalanced meeting structures, or unrealistic event pacing.
+METODIKA A PRAVIDLA HODNOCENÍ:
+1. SKRYTÉ VYHODNOCENÍ ZKUŠENOSTÍ: V duchu (bez uvádění nálepky ve výstupu) posuď, zda je oddíl Začátečník, Středně pokročilý, nebo Pokročilý na základě složitosti plánu, stanovených cílů, řešení bezpečnosti a gradace programu.
+   - Pro začínající oddíly: Zaměř se na základní bezpečnost, klíčové termíny výprav a základní zapojení družin.
+   - Pro pokročilé oddíly: Zaměř se na plnění stezek/vítězek, skautskou výchovnou metodu, delegaci na rádce a pestrost programu.
+2. TÓN: Empatický, povzbudivý a mentorský. Vyhni se korporátnímu jargonu, odtažité kritice nebo přehnané přísnosti.
+3. METODIKA A ODKAZY: Vycházej ze standardů okresního plánování. Upozorni na chybějící bezpečnostní plány (voda, hory), nevyváženou strukturu schůzek nebo nereálné tempo akcí.
+4. JAZYK: Odpovídaj výhradně v českém jazyce s využitím přirozené české skautské terminologie (oddíl, družina, schůzka, výprava, tábor, skautská výchovná metoda, družinový systém, rádce).
 
-OUTPUT FORMAT:
-Generate structured Markdown with the following sections:
-- 🌟 **Overall Strengths** (Highlight 2-3 specific positives)
-- 🎯 **Growth Opportunities & Recommendations** (3-4 prioritized improvements)
-- ⚠️ **Safety & Compliance Check** (Required safety plans, missing dates, risk areas)
-- 💡 **Advisor's Direct Coaching Note** (A personal, encouraging summary note)
+STRUKTURA VÝSTUPU:
+Vygeneruj strukturovaný Markdown s následujícími sekcemi:
+- **Hlavní silné stránky** (Vyzdvihni 2-3 konkrétní pozitiva plánu)
+- **Příležitosti k růstu a doporučení** (3-4 prioritní oblasti pro zlepšení)
+- **Kontrola bezpečnosti a metodiky** (Vyžadované bezpečnostní plány, chybějící klíčové termíny, rizikové oblasti)
+- **Osobní vzkaz zpravodaje** (Osobní, povzbudivé závěrečné slovo pro vedení oddílu)
 """
 
 def get_gemini_client():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        st.error("⚠️ GEMINI_API_KEY environment variable is missing!")
+        st.error("GEMINI_API_KEY environment variable is missing.")
         st.stop()
     return genai.Client(api_key=api_key)
 
 # Header
-st.title("⚜️ Scout Plan Automated Feedback Tool")
-st.caption("Upload your annual unit plan to receive instant, constructive, and private advisor coaching.")
+st.title("Automatizovaná zpětná vazba pro skautské plány")
+st.caption("Nahrajte celoroční plán svého oddílu a získejte okamžitou, konstruktivní a soukromou zpětnou vazbu od okresního zpravodaje.")
 
 st.divider()
 
 # Input Options Tab
-tab1, tab2 = st.tabs(["📄 Upload PDF Plan", "📝 Paste Raw Text / Plan Outline"])
+tab1, tab2 = st.tabs(["Nahrát plán v PDF", "Vložit text plánu"])
 
 plan_bytes = None
 plan_text = ""
 
 with tab1:
-    uploaded_file = st.file_uploader("Upload unit plan (PDF)", type=["pdf"])
+    uploaded_file = st.file_uploader("Nahrát plán oddílu (PDF)", type=["pdf"])
     if uploaded_file:
         plan_bytes = uploaded_file.getvalue()
 
 with tab2:
-    plan_text = st.text_area("Paste your plan or Google Doc text here:", height=250)
+    plan_text = st.text_area("Vložte text plánu nebo obsah z Google Docs zde:", height=250)
 
 st.divider()
 
-if st.button("🚀 Analyze Plan & Generate Feedback", use_container_width=True):
+if st.button("Analýza plánu a vygenerování zpětné vazby", use_container_width=True):
     if not plan_bytes and not plan_text.strip():
-        st.warning("Please upload a PDF plan or paste plan text to continue.")
+        st.warning("Pro pokračování prosím nahrajte soubor PDF nebo vložit text plánu.")
     else:
         client = get_gemini_client()
 
-        with st.spinner("🤖 Evaluating plan against district guidelines..."):
+        with st.spinner("Analýza plánu podle okresní metodiky..."):
             try:
                 # Prepare payload
                 contents = []
@@ -87,9 +85,9 @@ if st.button("🚀 Analyze Plan & Generate Feedback", use_container_width=True):
                     contents.append(pdf_part)
                 
                 if plan_text.strip():
-                    contents.append(f"Plan Document Text:\n{plan_text}")
+                    contents.append(f"Text dokumentu plánu:\n{plan_text}")
 
-                contents.append("Please review this scout plan against district standards and generate structured feedback.")
+                contents.append("Prosím zkontroluj tento skautský plán podle okresních metodických standardů a vygeneruj strukturovanou zpětnou vazbu v češtině.")
 
                 # Call Gemini API
                 response = client.models.generate_content(
@@ -102,16 +100,16 @@ if st.button("🚀 Analyze Plan & Generate Feedback", use_container_width=True):
                 )
 
                 # Render Results
-                st.success("✅ Feedback analysis complete!")
+                st.success("Analýza a zpětná vazba je dokončena.")
                 st.markdown(response.text)
 
                 # Download button for the output
                 st.download_button(
-                    label="📥 Download Feedback (.md)",
+                    label="Stáhnout zpětnou vazbu (.md)",
                     data=response.text,
-                    file_name="scout_plan_feedback.md",
+                    file_name="zpetna_vazba_plan_oddilu.md",
                     mime="text/markdown"
                 )
 
             except Exception as e:
-                st.error(f"❌ An error occurred during processing: {e}")
+                st.error(f"An error occurred during plan evaluation: {e}")
