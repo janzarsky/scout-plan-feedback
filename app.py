@@ -142,49 +142,65 @@ def load_system_instruction():
     return system_prompt
 
 
-if st.button("Analýza plánu a vygenerování zpětné vazby",
-             use_container_width=True):
-    if current_usage >= MAX_DAILY_ANALYSES:
-        st.error("Dosáhli jste maximálního denního limitu "
-                 f"({MAX_DAILY_ANALYSES} analýz). Zkuste to prosím zítra.")
-    elif not plan_bytes and not plan_text.strip():
-        st.warning("Pro pokračování prosím nahraj soubor PDF nebo vlož text "
-                   "plánu.")
-    else:
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Initialize session state for storing analysis result
+if "analysis_result" not in st.session_state:
+    st.session_state.analysis_result = None
 
-        with st.spinner("Analýza plánu..."):
-            try:
-                contents = []
-                if plan_bytes:
-                    contents.append(
-                        types.Part.from_bytes(data=plan_bytes,
-                                              mime_type="application/pdf")
+if st.session_state.analysis_result:
+    st.success("Analýza a zpětná vazba je dokončena.")
+    st.markdown(st.session_state.analysis_result)
+
+    st.divider()
+    if st.button("Provést novou analýzu", use_container_width=True):
+        st.session_state.analysis_result = None
+        st.rerun()
+
+else:
+    if st.button("Analýza plánu a vygenerování zpětné vazby",
+                 use_container_width=True):
+        if current_usage >= MAX_DAILY_ANALYSES:
+            st.error("Dosáhli jste maximálního denního limitu "
+                     f"({MAX_DAILY_ANALYSES} analýz). Zkuste to prosím zítra.")
+        elif not plan_bytes and not plan_text.strip():
+            st.warning("Pro pokračování prosím nahraj soubor PDF nebo vlož "
+                       "text plánu.")
+        else:
+            client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+            with st.spinner("Analýza plánu..."):
+                try:
+                    contents = []
+                    if plan_bytes:
+                        contents.append(
+                            types.Part.from_bytes(data=plan_bytes,
+                                                  mime_type="application/pdf")
+                        )
+                    if plan_text.strip():
+                        contents.append(f"Text dokumentu plánu:\n{plan_text}")
+                    contents.append("Prosím zkontroluj tento skautský plán "
+                                    "podle metodických standardů.")
+
+                    system_instruction = load_system_instruction()
+
+                    response = client.models.generate_content(
+                        model="gemini-3.8-flash",
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=0.3,
+                        )
                     )
-                if plan_text.strip():
-                    contents.append(f"Text dokumentu plánu:\n{plan_text}")
-                contents.append("Prosím zkontroluj tento skautský plán podle "
-                                "okresních metodických standardů.")
 
-                system_instruction = load_system_instruction()
+                    # Store the generated output in session state
+                    st.session_state.analysis_result = response.text
 
-                response = client.models.generate_content(
-                    model="gemini-3.8-flash",
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.3,
-                    )
-                )
+                    # Increment usage after successful response
+                    increment_user_usage(user_email)
 
-                # Increment usage after successful response
-                increment_user_usage(user_email)
+                    st.rerun()
 
-                st.success("Analýza a zpětná vazba je dokončena.")
-                st.markdown(response.text)
-
-            except Exception as e:
-                logger.error("Error during plan evaluation: %s", e,
-                             exc_info=True)
-                st.error("Při zpracování plánu došlo k chybě. "
-                         "Zkuste to prosím znovu.")
+                except Exception as e:
+                    logger.error("Error during plan evaluation: %s", e,
+                                 exc_info=True)
+                    st.error("Při zpracování plánu došlo k chybě. "
+                            "Zkuste to prosím znovu.")
