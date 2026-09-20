@@ -16,5 +16,5 @@ COPY . .
 EXPOSE 8080
 
 # Configure Streamlit for Cloud Run (host 0.0.0.0 and port 8080)
-ENV PORT=8080
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
