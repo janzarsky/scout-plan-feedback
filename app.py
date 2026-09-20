@@ -69,24 +69,21 @@ def get_user_usage_today(email: str) -> int:
 
 
 def increment_user_usage(email: str):
-    """Increment user analysis count in Firestore for today."""
+    """Increment user analysis count in Firestore for today atomically."""
     today_str = get_today_str()
     doc_ref = db.collection("usage_limits").document(email)
     doc = doc_ref.get()
 
-    current_count = 0
-    if doc.exists:
-        data = doc.to_dict() or {}
-        # If it's still today, keep existing count to increment
-        if data.get("last_reset_date") == today_str:
-            current_count = data.get("count", 0)
-
-    # Overwrite/Set with new incremented count and today's date
-    doc_ref.set({
-        "count": current_count + 1,
-        "last_reset_date": today_str,
-        "email": email
-    }, merge=True)
+    if doc.exists and doc.to_dict().get("last_reset_date") == today_str:
+        doc_ref.update({
+            "count": firestore.Increment(1)
+        })
+    else:
+        doc_ref.set({
+            "count": 1,
+            "last_reset_date": today_str,
+            "email": email
+        }, merge=True)
 
 
 # Header
