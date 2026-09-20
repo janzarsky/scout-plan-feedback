@@ -67,55 +67,6 @@ Vygeneruj strukturovaný Markdown s následujícími sekcemi:
 """
 
 
-def debug_auth_environment():
-    """Inspect and log container environment variables and st.secrets status."""
-    logger.info("=== START AUTH DEBUG CHECK ===")
-    
-    # 1. Check process environment variables
-    env_keys = [
-        "STREAMLIT_AUTH__REDIRECT_URI",
-        "STREAMLIT_AUTH__GOOGLE__CLIENT_ID",
-        "STREAMLIT_AUTH__GOOGLE__CLIENT_SECRET",
-        "STREAMLIT_AUTH__COOKIE_SECRET",
-        "STREAMLIT_AUTH__GOOGLE__SERVER_METADATA_URL",
-    ]
-    
-    logger.info("--- Container Environment Variables ---")
-    for key in env_keys:
-        val = os.getenv(key)
-        if val:
-            # Mask sensitive values for security in logs
-            masked_val = val[:4] + "..." + val[-4:] if len(val) > 8 else "***"
-            logger.info(f"ENV {key}: PRESENT (Length: {len(val)}, Value: {masked_val})")
-        else:
-            logger.warning(f"ENV {key}: MISSING")
-
-    # 2. Check st.secrets structure
-    logger.info("--- Streamlit Secrets Inspection ---")
-    try:
-        if "auth" in st.secrets:
-            logger.info("st.secrets['auth'] block found.")
-            auth_sec = st.secrets["auth"]
-            logger.info(f"st.secrets['auth'] keys: {list(auth_sec.keys())}")
-            
-            if "google" in auth_sec:
-                logger.info("st.secrets['auth']['google'] block found.")
-                google_sec = auth_sec["google"]
-                logger.info(f"st.secrets['auth']['google'] keys: {list(google_sec.keys())}")
-            else:
-                logger.warning("st.secrets['auth']['google'] block is MISSING.")
-        else:
-            logger.warning("st.secrets['auth'] block is MISSING.")
-    except Exception as e:
-        logger.error(f"Error inspecting st.secrets: {e}")
-        
-    logger.info("=== END AUTH DEBUG CHECK ===")
-
-
-# Run debug inspection on script execution
-debug_auth_environment()
-
-
 # Require Authentication
 if not st.user or "email" not in st.user:
     st.title("Automatizovaná zpětná vazba pro skautské plány")
