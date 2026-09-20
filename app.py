@@ -20,7 +20,7 @@ db = firestore.Client()
 
 # Page setup
 st.set_page_config(
-    page_title="Automatizovaná zpětná vazba pro skautské plány",
+    page_title="Zkontroluj si svůj skautský oddílový plán",
     layout="centered"
 )
 
@@ -37,8 +37,8 @@ st.markdown("""
 
 # Require Authentication
 if not st.user or "email" not in st.user:
-    st.title("Automatizovaná zpětná vazba pro skautské plány")
-    st.write("Pro použití této aplikace se prosím přihlaste pomocí účtu "
+    st.title("Zkontroluj si svůj skautský oddílový plán")
+    st.write("Pro použití této aplikace se prosím přihlas pomocí účtu "
              "Google.")
     if st.button("Přihlásit se přes Google"):
         st.login("google")
@@ -90,8 +90,8 @@ def increment_user_usage(email: str):
 
 
 # Header
-st.title("Automatizovaná zpětná vazba pro skautské plány")
-st.write(f"Přihlášen jako: **{user_email}**")
+st.title("Zkontroluj si svůj skautský oddílový plán")
+st.write(f"Přihlášen jako: **{user_email}**. Vytvořil Walker (walker@skaut.cz)")
 if st.button("Odhlásit se"):
     st.logout()
 
