@@ -1,6 +1,7 @@
 import os
 import logging
 import streamlit as st
+from datetime import datetime, timezone
 from google import genai
 from google.genai import types
 from google.cloud import firestore
@@ -66,7 +67,7 @@ Vygeneruj strukturovaný Markdown s následujícími sekcemi:
 """
 
 # Require Authentication
-if not st.user.is_logged_in:
+if not st.user or "email" not in st.user:
     st.title("Automatizovaná zpětná vazba pro skautské plány")
     st.write("Pro použití této aplikace se prosím přihlaste pomocí účtu "
              "Google.")
@@ -75,27 +76,45 @@ if not st.user.is_logged_in:
     st.stop()
 
 # User is authenticated
-user_email = st.user.email
+user_email = st.user["email"]
+
+
+def get_today_str() -> str:
+    """Returns today's date in YYYY-MM-DD format (UTC)."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def get_user_usage_today(email: str) -> int:
     """Fetch total analyses run by the user today."""
-    today_str = firestore.SERVER_TIMESTAMP  # or date string YYYY-MM-DD
+    today_str = get_today_str()
     doc_ref = db.collection("usage_limits").document(email)
     doc = doc_ref.get()
+
     if doc.exists:
-        data = doc.to_dict()
+        data = doc.to_dict() or {}
+        # If the recorded date matches today's date, return the stored count
         if data.get("last_reset_date") == today_str:
             return data.get("count", 0)
+
     return 0
 
 
 def increment_user_usage(email: str):
-    """Increment user analysis count in Firestore."""
-    today_str = firestore.SERVER_TIMESTAMP
+    """Increment user analysis count in Firestore for today."""
+    today_str = get_today_str()
     doc_ref = db.collection("usage_limits").document(email)
+    doc = doc_ref.get()
+
+    current_count = 0
+    if doc.exists:
+        data = doc.to_dict() or {}
+        # If it's still today, keep existing count to increment
+        if data.get("last_reset_date") == today_str:
+            current_count = data.get("count", 0)
+
+    # Overwrite/Set with new incremented count and today's date
     doc_ref.set({
-        "count": firestore.Increment(1),
+        "count": current_count + 1,
         "last_reset_date": today_str,
         "email": email
     }, merge=True)

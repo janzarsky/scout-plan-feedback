@@ -1,3 +1,6 @@
 [client]
 showErrorDetails = false
-toolbarMode = "off"
+toolbarMode = "minimal"
+
+[auth.google]
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
