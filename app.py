@@ -66,7 +66,7 @@ Vygeneruj strukturovaný Markdown s následujícími sekcemi:
 """
 
 # Require Authentication
-if not st.experimental_user.is_logged_in:
+if not st.user.is_logged_in:
     st.title("Automatizovaná zpětná vazba pro skautské plány")
     st.write("Pro použití této aplikace se prosím přihlaste pomocí účtu "
              "Google.")
@@ -75,7 +75,7 @@ if not st.experimental_user.is_logged_in:
     st.stop()
 
 # User is authenticated
-user_email = st.experimental_user.email
+user_email = st.user.email
 
 
 def get_user_usage_today(email: str) -> int:
