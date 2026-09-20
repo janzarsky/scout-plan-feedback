@@ -1,8 +1,16 @@
 import os
+import logging
 import streamlit as st
 from pypdf import PdfReader
 from google import genai
 from google.genai import types
+
+# Configure logging for server-side error capture
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Constants
+MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB limit
 
 # Page setup
 st.set_page_config(
@@ -77,7 +85,10 @@ plan_text = ""
 with tab1:
     uploaded_file = st.file_uploader("Nahrát plán oddílu (PDF)", type=["pdf"])
     if uploaded_file:
-        plan_bytes = uploaded_file.getvalue()
+        if uploaded_file.size > MAX_FILE_SIZE_BYTES:
+            st.error("Velikost souboru přesahuje povolený limit 2 MB.")
+        else:
+            plan_bytes = uploaded_file.getvalue()
 
 with tab2:
     plan_text = st.text_area("Vlož text plánu nebo obsah z Google Docs zde:",
@@ -135,4 +146,7 @@ if st.button("Analýza plánu a vygenerování zpětné vazby",
                 )
 
             except Exception as e:
-                st.error(f"An error occurred during plan evaluation: {e}")
+                logger.error("Error during plan evaluation: %s", e,
+                             exc_info=True)
+                st.error("Při zpracování plánu došlo k chybě. "
+                         "Zkuste to prosím znovu.")
