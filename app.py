@@ -14,6 +14,13 @@ logger = logging.getLogger(__name__)
 MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB limit
 MAX_DAILY_ANALYSES = 50                  # Per-user daily quota
 
+# MIME type mapping based on file extension
+MIME_TYPES = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
 # Initialize Firestore for user usage counting
 # (Uses Cloud Run's default service account authentication)
 db = firestore.Client()
@@ -100,17 +107,21 @@ st.caption(f"Využité analýzy pro dnešní den: {current_usage} "
            f"z {MAX_DAILY_ANALYSES}")
 
 # Input Options Tab
-tab1, tab2 = st.tabs(["Nahrát plán v PDF", "Vložit text plánu"])
+tab1, tab2 = st.tabs(["Nahrát plán (PDF, DOCX, XLSX)", "Vložit text plánu"])
 
 plan_bytes = None
+plan_mime_type = None
 plan_text = ""
 
 with tab1:
-    uploaded_file = st.file_uploader("Nahrát plán oddílu (PDF)", type=["pdf"])
+    uploaded_file = st.file_uploader("Nahrát plán oddílu (PDF, DOCX, XLSX)",
+                                     type=["pdf", "docx", "xlsx"])
     if uploaded_file:
         if uploaded_file.size > MAX_FILE_SIZE_BYTES:
             st.error("Velikost souboru přesahuje povolený limit 2 MB.")
         else:
+            file_ext = uploaded_file.name.split(".")[-1].lower()
+            plan_mime_type = MIME_TYPES.get(file_ext)
             plan_bytes = uploaded_file.getvalue()
 
 with tab2:
@@ -162,18 +173,18 @@ else:
             st.error("Dosáhli jste maximálního denního limitu "
                      f"({MAX_DAILY_ANALYSES} analýz). Zkuste to prosím zítra.")
         elif not plan_bytes and not plan_text.strip():
-            st.warning("Pro pokračování prosím nahraj soubor PDF nebo vlož "
-                       "text plánu.")
+            st.warning("Pro pokračování prosím nahraj soubor (PDF, DOCX, "
+                       "XLSX) nebo vlož text plánu.")
         else:
             client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
             with st.spinner("Analýza plánu..."):
                 try:
                     contents = []
-                    if plan_bytes:
+                    if plan_bytes and plan_mime_type:
                         contents.append(
                             types.Part.from_bytes(data=plan_bytes,
-                                                  mime_type="application/pdf")
+                                                  mime_type=plan_mime_type)
                         )
                     if plan_text.strip():
                         contents.append(f"Text dokumentu plánu:\n{plan_text}")
