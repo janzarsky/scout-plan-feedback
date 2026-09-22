@@ -46,7 +46,7 @@ st.markdown("""
 if not st.user or "email" not in st.user:
     st.title("Zkontroluj si svůj skautský oddílový plán")
     st.write("Pro použití této aplikace se prosím přihlas pomocí účtu "
-             "Google.")
+             "Google. Ukládat o tobě budeme jen počet použití nástroje.")
     if st.button("Přihlásit se přes Google"):
         st.login("google")
     st.stop()
@@ -106,6 +106,11 @@ current_usage = get_user_usage_today(user_email)
 st.caption(f"Využité analýzy pro dnešní den: {current_usage} "
            f"z {MAX_DAILY_ANALYSES}")
 
+st.caption("Nahrané plány nikde neukládáme. Pro zpracování používáme AI model "
+           "Gemini od Googlu - nenahrávej soubory, které obsahují osobní "
+           "údaje jiných. Zpětná vazba bude nejspíš obsahovat chyby - "
+           "používej ji spíš jako inspiraci.")
+
 # Input Options Tab
 tab1, tab2 = st.tabs(["Nahrát plán (PDF, DOCX, XLSX)", "Vložit text plánu"])
 
@@ -162,6 +167,10 @@ if st.session_state.analysis_result:
     st.markdown(st.session_state.analysis_result)
 
     st.divider()
+
+    st.caption("Jak se ti nástroj líbí? Zanech nám zpětnou vazbu: "
+               "https://forms.gle/mmtDXmMmdE9CttB7A")
+
     if st.button("Provést novou analýzu", use_container_width=True):
         st.session_state.analysis_result = None
         st.rerun()
@@ -214,4 +223,4 @@ else:
                     logger.error("Error during plan evaluation: %s", e,
                                  exc_info=True)
                     st.error("Při zpracování plánu došlo k chybě. "
-                            "Zkuste to prosím znovu.")
+                             "Zkuste to prosím znovu.")
